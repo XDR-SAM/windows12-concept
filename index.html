@@ -379,6 +379,9 @@
             background: rgba(255,255,255,0.1);
             transform: translateY(-2px);
         }
+        .taskbar-item:active {
+            transform: translateY(0) scale(0.96);
+        }
         
         .taskbar-item.active {
             background: rgba(255,255,255,0.15);
@@ -511,6 +514,9 @@
         .start-app:hover {
             background: rgba(255,255,255,0.1);
             transform: scale(1.05);
+        }
+        .start-app:active {
+            transform: scale(0.97);
         }
         
         .start-app i {
@@ -1671,7 +1677,9 @@
             text-align: center;
         }
         
-        /* Mouse Glow Effect */
+        .window:focus-within .window-header { box-shadow: 0 0 0 2px rgba(0,120,212,0.45); }
+
+    /* Mouse Glow Effect */
         .mouse-glow {
             position: fixed;
             width: 300px;
@@ -2021,6 +2029,8 @@
         // ========================
         
         // Global State
+        const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         const state = {
             currentWindowId: 0,
             windows: {},
@@ -2070,24 +2080,18 @@
         
         // Boot Sequence
         function bootSequence() {
+            const quick = prefersReducedMotion();
+            const base = quick ? 0.15 : 0.5;
             const bootTl = gsap.timeline();
-            
+
             bootTl
-                .to(elements.bootScreen, { opacity: 1, duration: 0.5 })
-                .add(() => {
-                    // Animate boot logo
-                    anime({
-                        targets: '.boot-logo',
-                        scale: [0.8, 1],
-                        opacity: [0, 1],
-                        duration: 1000,
-                        easing: 'easeOutElastic(1, .5)'
-                    });
-                })
-                .to({}, { duration: 3 }) // Loading time
+                .fromTo(elements.bootScreen, { opacity: 0 }, { opacity: 1, duration: base })
+                .fromTo('.boot-logo', { scale: 0.85, opacity: 0, filter: 'blur(12px)' }, { scale: 1, opacity: 1, filter: 'blur(0px)', duration: quick ? 0.2 : 1.0, ease: 'power3.out' }, 0.1)
+                .fromTo('.boot-loader', { scaleX: 0 }, { scaleX: 1, duration: quick ? 0.2 : 2.6, ease: 'expo.inOut' }, 0.3)
                 .to(elements.bootScreen, {
                     opacity: 0,
-                    duration: 0.5,
+                    duration: base,
+                    delay: quick ? 0.1 : 0.4,
                     onComplete: () => {
                         elements.bootScreen.style.display = 'none';
                         showLockScreen();
@@ -2125,18 +2129,19 @@
         
         // Unlock and Show Desktop
         function unlockDesktop() {
-            const unlockTl = gsap.timeline();
-            
-            unlockTl
-                .to(elements.lockScreen, {
-                    opacity: 0,
-                    scale: 1.1,
-                    duration: 0.5,
-                    onComplete: () => {
-                        elements.lockScreen.style.display = 'none';
-                        showDesktop();
-                    }
-                });
+            const quick = prefersReducedMotion();
+            const t = quick ? 0.15 : 0.5;
+            elements.lockScreen.style.pointerEvents = 'none';
+            gsap.to(elements.lockScreen, {
+                opacity: 0,
+                scale: 1.05,
+                duration: t,
+                ease: 'power2.in',
+                onComplete: () => {
+                    elements.lockScreen.style.display = 'none';
+                    showDesktop();
+                }
+            });
         }
         
         // Show Desktop
@@ -2144,31 +2149,29 @@
             elements.desktop.style.display = 'block';
             elements.taskbar.style.display = 'flex';
             state.bootComplete = true;
-            
+
             gsap.fromTo(elements.desktop,
-                { opacity: 0, y: 20 },
-                { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }
+                { opacity: 0, y: 18 },
+                { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }
             );
-            
+
             gsap.fromTo(elements.taskbar,
-                { opacity: 0, y: 20 },
-                { opacity: 1, y: 0, duration: 0.5, delay: 0.2, ease: 'power2.out' }
+                { opacity: 0, y: 18 },
+                { opacity: 1, y: 0, duration: 0.55, delay: 0.15, ease: 'power3.out' }
             );
-            
-            // Animate desktop icons
+
             anime({
                 targets: '.desktop-icon',
-                scale: [0, 1],
+                scale: [0.8, 1],
                 opacity: [0, 1],
-                delay: anime.stagger(50, {start: 300}),
-                duration: 400,
-                easing: 'easeOutBack'
+                delay: anime.stagger(55, {start: 320}),
+                duration: 520,
+                easing: 'easeOutBack(1.4)'
             });
-            
-            // Show welcome notification
+
             setTimeout(() => {
                 showNotification('Welcome to Windows 12', 'Your system is ready', 'bell');
-            }, 1000);
+            }, 900);
         }
         
         // ========================
@@ -2341,26 +2344,14 @@
         
         function openStartMenu() {
             elements.startMenu.style.display = 'flex';
-            gsap.to(elements.startMenu, {
-                opacity: 1,
-                scale: 1,
-                duration: 0.3,
-                ease: 'back.out(1.5)'
-            });
+            gsap.fromTo(elements.startMenu, { opacity: 0, scale: 0.92, y: 12 }, { opacity: 1, scale: 1, y: 0, duration: 0.35, ease: 'back.out(1.25)' });
             state.startMenuOpen = true;
             closeNotificationCenter();
             closeWidgetsPanel();
         }
         
         function closeStartMenu() {
-            gsap.to(elements.startMenu, {
-                opacity: 0,
-                scale: 0.9,
-                duration: 0.2,
-                onComplete: () => {
-                    elements.startMenu.style.display = 'none';
-                }
-            });
+            gsap.to(elements.startMenu, { opacity: 0, scale: 0.94, y: 10, duration: 0.22, ease: 'power2.in', onComplete: () => { elements.startMenu.style.display = 'none'; } });
             state.startMenuOpen = false;
         }
         
@@ -2379,8 +2370,8 @@
         function openNotificationCenter() {
             elements.notificationCenter.style.display = 'flex';
             gsap.fromTo(elements.notificationCenter,
-                { opacity: 0, x: 50 },
-                { opacity: 1, x: 0, duration: 0.3 }
+                { opacity: 0, x: 40 },
+                { opacity: 1, x: 0, duration: 0.34, ease: 'power3.out' }
             );
             state.notifCenterOpen = true;
             closeStartMenu();
@@ -2388,7 +2379,7 @@
         }
         
         function closeNotificationCenter() {
-            elements.notificationCenter.style.display = 'none';
+            gsap.to(elements.notificationCenter, { opacity: 0, x: 30, duration: 0.22, ease: 'power2.in', onComplete: () => { elements.notificationCenter.style.display = 'none'; } });
             state.notifCenterOpen = false;
         }
         
@@ -2447,8 +2438,8 @@
             updateSystemStats();
             elements.widgetsPanel.style.display = 'flex';
             gsap.fromTo(elements.widgetsPanel,
-                { opacity: 0, x: -50 },
-                { opacity: 1, x: 0, duration: 0.3 }
+                { opacity: 0, x: -40 },
+                { opacity: 1, x: 0, duration: 0.34, ease: 'power3.out' }
             );
             state.widgetsOpen = true;
             closeStartMenu();
@@ -2456,7 +2447,7 @@
         }
         
         function closeWidgetsPanel() {
-            elements.widgetsPanel.style.display = 'none';
+            gsap.to(elements.widgetsPanel, { opacity: 0, x: -30, duration: 0.22, ease: 'power2.in', onComplete: () => { elements.widgetsPanel.style.display = 'none'; } });
             state.widgetsOpen = false;
         }
         
@@ -2672,12 +2663,7 @@
             });
             
             // Animate in
-            gsap.to(windowEl, {
-                opacity: 1,
-                scale: 1,
-                duration: 0.3,
-                ease: 'back.out(1.2)'
-            });
+            gsap.fromTo(windowEl, { opacity: 0, scale: 0.94, y: 18 }, { opacity: 1, scale: 1, y: 0, duration: 0.38, ease: 'power3.out' });
             
             // Initialize app-specific functionality
             initAppFunctionality(appName, windowEl);
@@ -3279,16 +3265,7 @@ Available Memory:          8,192 MB
             const win = state.windows[windowId];
             if (!win) return;
             
-            gsap.to(win.element, {
-                scale: 0.8,
-                opacity: 0,
-                y: 100,
-                duration: 0.3,
-                onComplete: () => {
-                    win.element.classList.add('minimized');
-                    win.minimized = true;
-                }
-            });
+            gsap.to(win.element, { scale: 0.92, opacity: 0, y: 90, duration: 0.28, ease: 'power2.in', onComplete: () => { win.element.classList.add('minimized'); win.minimized = true; } });
         }
         
         function restoreWindow(windowId) {
@@ -3297,13 +3274,7 @@ Available Memory:          8,192 MB
             
             win.element.classList.remove('minimized');
             win.minimized = false;
-            gsap.to(win.element, {
-                scale: 1,
-                opacity: 1,
-                y: 0,
-                duration: 0.3,
-                ease: 'back.out(1.5)'
-            });
+            gsap.fromTo(win.element, { opacity: 0, y: 80, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: 'back.out(1.4)' });
             focusWindow(windowId);
         }
         
@@ -3327,9 +3298,10 @@ Available Memory:          8,192 MB
             if (!win) return;
             
             gsap.to(win.element, {
-                scale: 0.8,
+                scale: 0.92,
                 opacity: 0,
-                duration: 0.3,
+                duration: 0.24,
+                ease: 'power2.in',
                 onComplete: () => {
                     win.element.remove();
                     delete state.windows[windowId];
